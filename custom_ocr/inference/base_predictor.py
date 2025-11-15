@@ -72,7 +72,8 @@ class BasePredictor:
             use_gpu: str = None,
             batch_size: int = 1,
             model_name: str = None,
-            onnx_sess_options=None
+            onnx_sess_options=None,
+            onnx_providers=None
     ) -> None:
         """Initializes the BasePredictor.
 
@@ -87,7 +88,7 @@ class BasePredictor:
                 Defaults to None.
         """
         model_dir = ModelManager(model_save_dir).get_model(model_name)
-        self.use_gpu, self.onnx_sess_options = use_gpu, onnx_sess_options
+        self.use_gpu, self.onnx_sess_options, self.onnx_providers = use_gpu, onnx_sess_options, onnx_providers
         model_paths = get_model_paths(model_dir)
         if "onnx" not in model_paths:
             paddle_to_onnx(model_dir, model_dir)
@@ -154,7 +155,7 @@ class BasePredictor:
             self.batch_sampler.batch_size = batch_size
 
     def create_static_infer(self):
-        return OnnxInfer(self.model_dir, self.use_gpu, self.onnx_sess_options)
+        return OnnxInfer(self.model_dir, self.use_gpu, self.onnx_sess_options, self.onnx_providers)
 
     def apply(self, input_, **kwargs):
         """
