@@ -1,6 +1,14 @@
+import pprint
+
+import onnxruntime as ort
+
 from custom_ocr import TextDetection
 
-model_dir = "models"
-img_file = r"C:\Users\Victor\OneDrive\Public\test images\448800.0.jpg"
+ort.preload_dlls()
 
-text_det = TextDetection(model_dir)
+model_dir = "models"
+img_files = r"C:\Users\Victor\OneDrive\Public\test images"
+
+ocr_fn = TextDetection(model_dir)
+results = ocr_fn.predict_iter(img_files)
+pprint.pprint(list(results))
