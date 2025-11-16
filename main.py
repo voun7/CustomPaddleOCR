@@ -1,8 +1,11 @@
+import ctypes
+import site
 from datetime import timedelta
 from time import perf_counter
 
 import onnxruntime as ort
 
+ctypes.CDLL(f"{site.getsitepackages()[1]}/nvidia/cuda_nvrtc/bin/nvrtc64_120_0.dll")  # Prevent loading error for the dll
 ort.preload_dlls()
 
 from custom_ocr import TextDetection
