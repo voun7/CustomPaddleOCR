@@ -5,7 +5,8 @@ from .processors import CTCLabelDecode, OCRReisizeNormImg, ToBatch
 from ..base_predictor import BasePredictor, FuncRegister
 from ..batch_sampler import ImageBatchSampler
 from ..image_reader import ReadImage
-from ...results import TextRecResult
+from ...results.fonts import Font
+from ...results.text_rec import TextRecResult
 
 
 class TextRecPredictor(BasePredictor):

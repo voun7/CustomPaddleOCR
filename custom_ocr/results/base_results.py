@@ -8,97 +8,11 @@ from abc import abstractmethod
 from enum import Enum
 from pathlib import Path
 
-import PIL
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
-from .utils import logger
-from .utils.download import download
-
-
-class WriterType(Enum):
-    """WriterType"""
-
-    IMAGE = 1
-    JSON = 4
-
-
-class _BaseJsonWriterBackend:
-    def __init__(self, indent=4, ensure_ascii=False):
-        super().__init__()
-        self.indent = indent
-        self.ensure_ascii = ensure_ascii
-
-    def write_obj(self, out_path, obj, **bk_args):
-        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-        return self._write_obj(out_path, obj, **bk_args)
-
-    def _write_obj(self, out_path, obj):
-        raise NotImplementedError
-
-
-class JsonWriterBackend(_BaseJsonWriterBackend):
-    def _write_obj(self, out_path, obj, **bk_args):
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(obj, f, **bk_args)
-
-
-class _BaseWriter:
-    """_BaseWriter"""
-
-    def __init__(self, backend, **bk_args):
-        super().__init__()
-        if len(bk_args) == 0:
-            bk_args = self.get_default_backend_args()
-        self.bk_type = backend
-        self.bk_args = bk_args
-        self._backend = self.get_backend()
-
-    def write(self, out_path, obj):
-        """write"""
-        raise NotImplementedError
-
-    def get_backend(self, bk_args=None):
-        """get backend"""
-        if bk_args is None:
-            bk_args = self.bk_args
-        return self._init_backend(self.bk_type, bk_args)
-
-    def set_backend(self, backend, **bk_args):
-        self.bk_type = backend
-        self.bk_args = bk_args
-        self._backend = self.get_backend()
-
-    def _init_backend(self, bk_type, bk_args):
-        """init backend"""
-        raise NotImplementedError
-
-    def get_type(self):
-        """get type"""
-        raise NotImplementedError
-
-    def get_default_backend_args(self):
-        """get default backend arguments"""
-        return {}
-
-
-class JsonWriter(_BaseWriter):
-    def __init__(self, backend="json", **bk_args):
-        super().__init__(backend=backend, **bk_args)
-
-    def write(self, out_path, obj, **bk_args):
-        return self._backend.write_obj(str(out_path), obj, **bk_args)
-
-    def _init_backend(self, bk_type, bk_args):
-        if bk_type == "json":
-            return JsonWriterBackend(**bk_args)
-        else:
-            raise ValueError("Unsupported backend type")
-
-    def get_type(self):
-        """get type"""
-        return WriterType.JSON
+from ..utils import logger
 
 
 class StrMixin:
@@ -272,6 +186,152 @@ class JsonMixin:
         logger.info(str_)
 
 
+class ImgMixin:
+    """Mixin class for adding image handling capabilities."""
+
+    def __init__(self, backend: str = "pillow", *args, **kwargs) -> None:
+        """Initializes ImgMixin.
+
+        Args:
+            backend (str): The backend to use for image processing. Defaults to "pillow".
+            *args: Additional positional arguments to pass to the ImageWriter.
+            **kwargs: Additional keyword arguments to pass to the ImageWriter.
+        """
+        self._img_writer = ImageWriter(backend=backend, *args, **kwargs)
+        self._save_funcs.append(self.save_to_img)
+
+    @abstractmethod
+    def _to_img(self):
+        """Abstract method to convert the result to an image.
+
+        Returns:
+            Dict[str, Image.Image]: The image representation result.
+        """
+        raise NotImplementedError
+
+    @property
+    def img(self):
+        """Property to get the image representation of the result.
+
+        Returns:
+            Dict[str, Image.Image]: The image representation of the result.
+        """
+        return self._to_img()
+
+    def save_to_img(self, save_path: str, *args, **kwargs) -> None:
+        """Saves the image representation of the result to the specified path.
+
+        Args:
+            save_path (str): The path to save the image. If the save path does not end with .jpg or .png, it appends the input path's stem and suffix to the save path.
+            *args: Additional positional arguments that will be passed to the image writer.
+            **kwargs: Additional keyword arguments that will be passed to the image writer.
+        """
+
+        def _is_image_file(file_path):
+            mime_type, _ = mimetypes.guess_type(file_path)
+            return mime_type is not None and mime_type.startswith("image/")
+
+        img = self._to_img()
+        if not _is_image_file(save_path):
+            fn = Path(self._get_input_fn())
+            suffix = fn.suffix if _is_image_file(fn) else ".png"
+            stem = fn.stem
+            base_save_path = Path(save_path)
+            for key in img:
+                save_path = base_save_path / f"{stem}_{key}{suffix}"
+                self._img_writer.write(save_path.as_posix(), img[key], *args, **kwargs)
+        else:
+            if len(img) > 1:
+                logger.warning(
+                    f"The result has multiple img files need to be saved. But the `save_path` has been specified as `{save_path}`!"
+                )
+            self._img_writer.write(save_path, img[list(img.keys())[0]], *args, **kwargs)
+
+
+class WriterType(Enum):
+    """WriterType"""
+
+    IMAGE = 1
+    JSON = 4
+
+
+class _BaseJsonWriterBackend:
+    def __init__(self, indent=4, ensure_ascii=False):
+        super().__init__()
+        self.indent = indent
+        self.ensure_ascii = ensure_ascii
+
+    def write_obj(self, out_path, obj, **bk_args):
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        return self._write_obj(out_path, obj, **bk_args)
+
+    def _write_obj(self, out_path, obj):
+        raise NotImplementedError
+
+
+class JsonWriterBackend(_BaseJsonWriterBackend):
+    def _write_obj(self, out_path, obj, **bk_args):
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(obj, f, **bk_args)
+
+
+class _BaseWriter:
+    """_BaseWriter"""
+
+    def __init__(self, backend, **bk_args):
+        super().__init__()
+        if len(bk_args) == 0:
+            bk_args = self.get_default_backend_args()
+        self.bk_type = backend
+        self.bk_args = bk_args
+        self._backend = self.get_backend()
+
+    def write(self, out_path, obj):
+        """write"""
+        raise NotImplementedError
+
+    def get_backend(self, bk_args=None):
+        """get backend"""
+        if bk_args is None:
+            bk_args = self.bk_args
+        return self._init_backend(self.bk_type, bk_args)
+
+    def set_backend(self, backend, **bk_args):
+        self.bk_type = backend
+        self.bk_args = bk_args
+        self._backend = self.get_backend()
+
+    def _init_backend(self, bk_type, bk_args):
+        """init backend"""
+        raise NotImplementedError
+
+    def get_type(self):
+        """get type"""
+        raise NotImplementedError
+
+    def get_default_backend_args(self):
+        """get default backend arguments"""
+        return {}
+
+
+class JsonWriter(_BaseWriter):
+    def __init__(self, backend="json", **bk_args):
+        super().__init__(backend=backend, **bk_args)
+
+    def write(self, out_path, obj, **bk_args):
+        return self._backend.write_obj(str(out_path), obj, **bk_args)
+
+    def _init_backend(self, bk_type, bk_args):
+        if bk_type == "json":
+            return JsonWriterBackend(**bk_args)
+        else:
+            raise ValueError("Unsupported backend type")
+
+    def get_type(self):
+        """get type"""
+        return WriterType.JSON
+
+
 class BaseResult(dict, JsonMixin, StrMixin):
     """Base class for result objects that can save themselves.
 
@@ -397,68 +457,6 @@ class ImageWriter(_BaseWriter):
         return WriterType.IMAGE
 
 
-class ImgMixin:
-    """Mixin class for adding image handling capabilities."""
-
-    def __init__(self, backend: str = "pillow", *args, **kwargs) -> None:
-        """Initializes ImgMixin.
-
-        Args:
-            backend (str): The backend to use for image processing. Defaults to "pillow".
-            *args: Additional positional arguments to pass to the ImageWriter.
-            **kwargs: Additional keyword arguments to pass to the ImageWriter.
-        """
-        self._img_writer = ImageWriter(backend=backend, *args, **kwargs)
-        self._save_funcs.append(self.save_to_img)
-
-    @abstractmethod
-    def _to_img(self):
-        """Abstract method to convert the result to an image.
-
-        Returns:
-            Dict[str, Image.Image]: The image representation result.
-        """
-        raise NotImplementedError
-
-    @property
-    def img(self):
-        """Property to get the image representation of the result.
-
-        Returns:
-            Dict[str, Image.Image]: The image representation of the result.
-        """
-        return self._to_img()
-
-    def save_to_img(self, save_path: str, *args, **kwargs) -> None:
-        """Saves the image representation of the result to the specified path.
-
-        Args:
-            save_path (str): The path to save the image. If the save path does not end with .jpg or .png, it appends the input path's stem and suffix to the save path.
-            *args: Additional positional arguments that will be passed to the image writer.
-            **kwargs: Additional keyword arguments that will be passed to the image writer.
-        """
-
-        def _is_image_file(file_path):
-            mime_type, _ = mimetypes.guess_type(file_path)
-            return mime_type is not None and mime_type.startswith("image/")
-
-        img = self._to_img()
-        if not _is_image_file(save_path):
-            fn = Path(self._get_input_fn())
-            suffix = fn.suffix if _is_image_file(fn) else ".png"
-            stem = fn.stem
-            base_save_path = Path(save_path)
-            for key in img:
-                save_path = base_save_path / f"{stem}_{key}{suffix}"
-                self._img_writer.write(save_path.as_posix(), img[key], *args, **kwargs)
-        else:
-            if len(img) > 1:
-                logger.warning(
-                    f"The result has multiple img files need to be saved. But the `save_path` has been specified as `{save_path}`!"
-                )
-            self._img_writer.write(save_path, img[list(img.keys())[0]], *args, **kwargs)
-
-
 class BaseCVResult(BaseResult, ImgMixin):
     """Base class for computer vision results."""
 
@@ -479,110 +477,3 @@ class BaseCVResult(BaseResult, ImgMixin):
             stem, suffix = fp.stem, fp.suffix
             fn = f"{stem}_{page_idx}{suffix}"
         return fn
-
-
-class TextDetResult(BaseCVResult):
-
-    def _to_img(self):
-        """draw rectangle"""
-        boxes = self["dt_polys"]
-        image = self["input_img"]
-        for box in boxes:
-            box = np.reshape(np.array(box).astype(int), [-1, 1, 2]).astype(np.int64)
-            cv2.polylines(image, [box], True, (0, 0, 255), 2)
-        return {"res": image[:, :, ::-1]}
-
-    def _to_str(self, *args, **kwargs):
-        data = copy.deepcopy(self)
-        data.pop("input_img")
-        return JsonMixin._to_str(data, *args, **kwargs)
-
-    def _to_json(self, *args, **kwargs):
-        data = copy.deepcopy(self)
-        data.pop("input_img")
-        return JsonMixin._to_json(data, *args, **kwargs)
-
-
-class Font:
-    def __init__(self, font_name=None, local_path=None):
-        self._local_path = local_path
-        if not local_path:
-            assert font_name is not None
-            self._font_name = font_name
-
-    @property
-    def path(self):
-        # HACK: download font file when needed only
-        if not self._local_path:
-            self._get_offical_font()
-        return self._local_path
-
-    def _get_offical_font(self):
-        """
-        Download the official font file.
-        """
-        font_path = (Path("fonts") / self._font_name).resolve().as_posix()
-        if not Path(font_path).is_file():
-            download(
-                url=f"https://paddle-model-ecology.bj.bcebos.com/paddlex/PaddleX3.0/fonts/{self._font_name}",
-                save_path=font_path,
-            )
-        self._local_path = font_path
-
-
-class TextRecResult(BaseCVResult):
-
-    def _to_str(self, *args, **kwargs):
-        data = copy.deepcopy(self)
-        data.pop("input_img")
-        data.pop("vis_font")
-        return JsonMixin._to_str(data, *args, **kwargs)
-
-    def _to_json(self, *args, **kwargs):
-        data = copy.deepcopy(self)
-        data.pop("input_img")
-        data.pop("vis_font")
-        return JsonMixin._to_json(data, *args, **kwargs)
-
-    def _to_img(self):
-        """Draw label on image"""
-        image = Image.fromarray(self["input_img"][:, :, ::-1])
-        rec_text = self["rec_text"]
-        rec_score = self["rec_score"]
-        vis_font = self["vis_font"] if self["vis_font"] is not None else Font(font_name="simfang.ttf")
-        image = image.convert("RGB")
-        image_width, image_height = image.size
-        text = f"{rec_text} ({rec_score})"
-        font = self.adjust_font_size(image_width, text, vis_font.path)
-        row_height = font.getbbox(text)[3]
-        new_image_height = image_height + int(row_height * 1.2)
-        new_image = Image.new("RGB", (image_width, new_image_height), (255, 255, 255))
-        new_image.paste(image, (0, 0))
-
-        draw = ImageDraw.Draw(new_image)
-        draw.text(
-            (0, image_height),
-            text,
-            fill=(0, 0, 0),
-            font=font,
-        )
-        return {"res": new_image}
-
-    def adjust_font_size(self, image_width, text, font_path):
-        font_size = int(image_width * 0.06)
-        font = ImageFont.truetype(font_path, font_size)
-
-        if int(PIL.__version__.split(".")[0]) < 10:
-            text_width, _ = font.getsize(text)
-        else:
-            text_width, _ = font.getbbox(text)[2:]
-
-        while text_width > image_width:
-            font_size -= 1
-            font = ImageFont.truetype(font_path, font_size)
-            if int(PIL.__version__.split(".")[0]) < 10:
-                text_width, _ = font.getsize(text)
-            else:
-                text_width, _ = font.getbbox(text)[2:]
-
-        return font
