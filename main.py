@@ -17,6 +17,10 @@ img_files = r"C:\Users\Victor\OneDrive\Public\test images"
 
 ocr_fn = TextDetection(model_dir)
 results = ocr_fn.predict_iter(img_files)
-print(list(results))
+for res in results:
+    res.print()
+    res.save_to_img("output")
+    res.save_to_json("output")
+    print("-" * 200)
 
 print(f"Duration: {timedelta(seconds=round(perf_counter() - start_time))}")

@@ -1,10 +1,10 @@
 from .processors import DBPostProcess
 from .processors import NormalizeImage, DetResizeForTest
-from .result import TextDetResult
 from ..base_predictor import BasePredictor, FuncRegister
 from ..batch_sampler import ImageBatchSampler
 from ..image_reader import ReadImage
 from ..pre_processes import ToBatch, ToCHWImage
+from ...inference.result import TextDetResult
 
 
 class TextDetPredictor(BasePredictor):
