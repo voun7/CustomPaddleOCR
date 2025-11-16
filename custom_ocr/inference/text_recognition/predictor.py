@@ -17,7 +17,7 @@ class TextRecPredictor(BasePredictor):
         super().__init__(**kwargs)
         self.input_shape = input_shape
         self.return_word_box = return_word_box
-        self.vis_font = None
+        self.vis_font = self.get_vis_font()
         self.pre_tfs, self.infer, self.post_op = self._build()
 
     def _build_batch_sampler(self):
@@ -107,3 +107,53 @@ class TextRecPredictor(BasePredictor):
     @register("KeepKeys")
     def foo(self, *args, **kwargs):
         return None, None
+
+    def get_vis_font(self):
+        if self.model_name.startswith(("PP-OCR", "en_PP-OCR")):
+            return Font(font_name="simfang.ttf")
+
+        if self.model_name in (
+                "latin_PP-OCRv3_mobile_rec",
+                "latin_PP-OCRv5_mobile_rec",
+        ):
+            return Font(font_name="latin.ttf")
+
+        if self.model_name in (
+                "cyrillic_PP-OCRv3_mobile_rec",
+                "cyrillic_PP-OCRv5_mobile_rec",
+                "eslav_PP-OCRv5_mobile_rec",
+        ):
+            return Font(font_name="cyrillic.ttf")
+
+        if self.model_name in (
+                "korean_PP-OCRv3_mobile_rec",
+                "korean_PP-OCRv5_mobile_rec",
+        ):
+            return Font(font_name="korean.ttf")
+
+        if self.model_name == "th_PP-OCRv5_mobile_rec":
+            return Font(font_name="th.ttf")
+
+        if self.model_name == "el_PP-OCRv5_mobile_rec":
+            return Font(font_name="el.ttf")
+
+        if self.model_name in (
+                "arabic_PP-OCRv3_mobile_rec",
+                "arabic_PP-OCRv5_mobile_rec",
+        ):
+            return Font(font_name="arabic.ttf")
+
+        if self.model_name == "ka_PP-OCRv3_mobile_rec":
+            return Font(font_name="kannada.ttf")
+
+        if self.model_name in ("te_PP-OCRv3_mobile_rec", "te_PP-OCRv5_mobile_rec"):
+            return Font(font_name="telugu.ttf")
+
+        if self.model_name in ("ta_PP-OCRv3_mobile_rec", "ta_PP-OCRv5_mobile_rec"):
+            return Font(font_name="tamil.ttf")
+
+        if self.model_name in (
+                "devanagari_PP-OCRv3_mobile_rec",
+                "devanagari_PP-OCRv5_mobile_rec",
+        ):
+            return Font(font_name="devanagari.ttf")
