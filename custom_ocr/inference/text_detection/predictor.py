@@ -1,10 +1,9 @@
-from .processors import DBPostProcess
-from .processors import NormalizeImage, DetResizeForTest
+from .processors import NormalizeImage, DetResizeForTest, DBPostProcess
 from ..base_predictor import BasePredictor, FuncRegister
 from ..batch_sampler import ImageBatchSampler
 from ..image_reader import ReadImage
 from ..pre_processes import ToBatch, ToCHWImage
-from ...inference.result import TextDetResult
+from ...results import TextDetResult
 
 
 class TextDetPredictor(BasePredictor):
@@ -87,9 +86,9 @@ class TextDetPredictor(BasePredictor):
         return "ToCHW", ToCHWImage()
 
     @register("DetLabelEncode")
-    def foo(self, **kwargs):
+    def foo(self, *args, **kwargs):
         return None, None
 
     @register("KeepKeys")
-    def foo(self, **kwargs):
+    def foo(self, *args, **kwargs):
         return None, None

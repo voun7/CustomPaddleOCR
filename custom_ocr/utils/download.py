@@ -9,7 +9,7 @@ from pathlib import Path
 
 import requests
 
-from custom_ocr.utils import logger
+from . import logger
 
 
 class _ProgressPrinter:
@@ -118,6 +118,15 @@ def _remove_if_exists(path):
             shutil.rmtree(path)
         else:
             os.remove(path)
+
+
+def download(url, save_path, print_progress=True, overwrite=False):
+    """download"""
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    if overwrite:
+        _remove_if_exists(save_path)
+    if not os.path.exists(save_path):
+        _download(url, save_path, print_progress=print_progress)
 
 
 def download_and_extract(url, save_dir, dst_name, print_progress=True, overwrite=False, no_interm_dir=True):

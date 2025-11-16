@@ -1,4 +1,5 @@
 from .inference.text_detection.predictor import TextDetPredictor
+from .inference.text_recognition.predictor import TextRecPredictor
 
 
 def get_ocr_model_names(lang, ppocr_version):
@@ -198,6 +199,18 @@ def get_ocr_model_names(lang, ppocr_version):
 class TextDetection:
     def __init__(self, model_save_dir: str, model_name: str = "PP-OCRv5_server_det", **kwargs):
         self.predictor = TextDetPredictor(model_save_dir=model_save_dir, model_name=model_name, **kwargs)
+
+    def predict_iter(self, input_):
+        return self.predictor.predict(input_)
+
+    def predict(self, input_):
+        result = list(self.predict_iter(input_))
+        return result
+
+
+class TextRecognition:
+    def __init__(self, model_save_dir: str, model_name: str = "PP-OCRv5_server_rec", **kwargs):
+        self.predictor = TextRecPredictor(model_save_dir=model_save_dir, model_name=model_name, **kwargs)
 
     def predict_iter(self, input_):
         return self.predictor.predict(input_)

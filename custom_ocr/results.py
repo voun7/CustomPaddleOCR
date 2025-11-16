@@ -13,7 +13,8 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from ..utils import logger
+from .utils import logger
+from .utils.download import download
 
 
 class WriterType(Enum):
@@ -502,6 +503,33 @@ class TextDetResult(BaseCVResult):
         return JsonMixin._to_json(data, *args, **kwargs)
 
 
+class Font:
+    def __init__(self, font_name=None, local_path=None):
+        self._local_path = local_path
+        if not local_path:
+            assert font_name is not None
+            self._font_name = font_name
+
+    @property
+    def path(self):
+        # HACK: download font file when needed only
+        if not self._local_path:
+            self._get_offical_font()
+        return self._local_path
+
+    def _get_offical_font(self):
+        """
+        Download the official font file.
+        """
+        font_path = (Path("fonts") / self._font_name).resolve().as_posix()
+        if not Path(font_path).is_file():
+            download(
+                url=f"https://paddle-model-ecology.bj.bcebos.com/paddlex/PaddleX3.0/fonts/{self._font_name}",
+                save_path=font_path,
+            )
+        self._local_path = font_path
+
+
 class TextRecResult(BaseCVResult):
 
     def _to_str(self, *args, **kwargs):
@@ -521,7 +549,7 @@ class TextRecResult(BaseCVResult):
         image = Image.fromarray(self["input_img"][:, :, ::-1])
         rec_text = self["rec_text"]
         rec_score = self["rec_score"]
-        vis_font = self["vis_font"] if self["vis_font"] is not None else ImageFont.load_default()
+        vis_font = self["vis_font"] if self["vis_font"] is not None else Font(font_name="simfang.ttf")
         image = image.convert("RGB")
         image_width, image_height = image.size
         text = f"{rec_text} ({rec_score})"
