@@ -57,4 +57,16 @@ python -m build
 pip install git+https://github.com/voun7/CustomPaddleOCR.git
 ```
 
+``` python
+from custom_ocr import CustomPaddleOCR
+
+ocr_fn = CustomPaddleOCR(model_save_dir="models")
+results = ocr_fn.predict_iter("test image folder")
+for res in results:
+    print(res)
+    res.save_to_img("output")
+    res.save_to_json("output")
+    
+```
+
 Sources: [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR), [PaddleX](https://github.com/PaddlePaddle/PaddleX)

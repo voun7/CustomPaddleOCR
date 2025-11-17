@@ -6,6 +6,7 @@ from .components.crop_image_regions import CropByPolys
 from .components.sort_boxes import SortQuadBoxes
 from .components.warp_image import rotate_image
 from ..inference.batch_sampler import ImageBatchSampler
+from ..inference.image_classification.predictor import ClasPredictor
 from ..inference.image_reader import ReadImage
 from ..inference.text_detection.predictor import TextDetPredictor
 from ..inference.text_recognition.predictor import TextRecPredictor
@@ -29,7 +30,8 @@ class OCRPipeline:
                 "TextLineOrientation",
                 {"model_config_error": "config error for textline_orientation_model!"},
             )
-            self.textline_orientation_model = None  # todo: add code for text line orientation
+            self.textline_orientation_model = ClasPredictor(model_name=textline_orientation_config["model_name"],
+                                                            **kwargs)
 
         text_det_config = config.get("SubModules", {}).get(
             "TextDetection", {"model_config_error": "config error for text_det_model!"}
@@ -111,9 +113,6 @@ class OCRPipeline:
     def check_model_settings_valid(self, model_settings: dict) -> bool:
         """
         Check if the input parameters are valid based on the initialized models.
-
-        Args:
-            model_info_params(Dict): A dictionary containing input parameters.
 
         Returns:
             bool: True if all required models are initialized according to input parameters, False otherwise.
@@ -278,11 +277,7 @@ class OCRPipeline:
                 all_subs_of_imgs = []
                 chunk_indices = [0]
                 for idx in indices:
-                    all_subs_of_img = list(
-                        self._crop_by_polys(
-                            doc_preprocessor_images[idx], dt_polys_list[idx]
-                        )
-                    )
+                    all_subs_of_img = list(self._crop_by_polys(doc_preprocessor_images[idx], dt_polys_list[idx]))
                     all_subs_of_imgs.extend(all_subs_of_img)
                     chunk_indices.append(chunk_indices[-1] + len(all_subs_of_img))
 
@@ -310,9 +305,7 @@ class OCRPipeline:
                         }
                         for img_id, sub_img in enumerate(all_subs_of_img)
                     ]
-                    sorted_subs_info = sorted(
-                        sub_img_info_list, key=lambda x: x["sub_img_ratio"]
-                    )
+                    sorted_subs_info = sorted(sub_img_info_list, key=lambda x: x["sub_img_ratio"])
                     sorted_subs_of_img = [all_subs_of_img[x["sub_img_id"]] for x in sorted_subs_info]
                     for i, rec_res in enumerate(
                             self.text_rec_model(sorted_subs_of_img, return_word_box=return_word_box)):
