@@ -78,6 +78,7 @@ class CustomPaddleOCR:
     def __init__(
             self,
             model_save_dir: str,
+            use_mobile_model=False,  # Only works when 'lang' is given
             text_detection_model_name=None,
             text_detection_model_dir=None,
             textline_orientation_model_name=None,
@@ -116,7 +117,7 @@ class CustomPaddleOCR:
                 )
         ):
             if lang is not None or ocr_version is not None:
-                det_model_name, rec_model_name = self._get_ocr_model_names(lang, ocr_version)
+                det_model_name, rec_model_name = self._get_ocr_model_names(lang, ocr_version, use_mobile_model)
                 if det_model_name is None or rec_model_name is None:
                     raise ValueError(f"No models are available for the language {repr(lang)} and "
                                      f"OCR version {repr(ocr_version)}.")
@@ -192,7 +193,7 @@ class CustomPaddleOCR:
         }
         return create_config_from_structure(structure)
 
-    def _get_ocr_model_names(self, lang, ppocr_version):
+    def _get_ocr_model_names(self, lang, ppocr_version, use_mobile_model: bool):
         LATIN_LANGS = [
             "af",
             "az",
@@ -325,10 +326,12 @@ class CustomPaddleOCR:
                 # Unknown language specified
                 return None, None
 
+        model_type = "mobile" if use_mobile_model else "server"
+
         if ppocr_version == "PP-OCRv5":
             rec_lang, rec_model_name = None, None
             if lang in ("ch", "chinese_cht", "japan"):
-                rec_model_name = "PP-OCRv5_server_rec"
+                rec_model_name = f"PP-OCRv5_{model_type}_rec"
             elif lang == "en":
                 rec_model_name = "en_PP-OCRv5_mobile_rec"
             elif lang in LATIN_LANGS:
@@ -354,13 +357,13 @@ class CustomPaddleOCR:
 
             if rec_lang is not None:
                 rec_model_name = f"{rec_lang}_PP-OCRv5_mobile_rec"
-            return "PP-OCRv5_server_det", rec_model_name
+            return f"PP-OCRv5_{model_type}_det", rec_model_name
 
         elif ppocr_version == "PP-OCRv4":
             if lang == "ch":
-                return "PP-OCRv4_mobile_det", "PP-OCRv4_mobile_rec"
+                return f"PP-OCRv4_{model_type}_det", f"PP-OCRv4_{model_type}_rec"
             elif lang == "en":
-                return "PP-OCRv4_mobile_det", "en_PP-OCRv4_mobile_rec"
+                return f"PP-OCRv4_{model_type}_det", "en_PP-OCRv4_mobile_rec"
             else:
                 return None, None
         else:
@@ -383,7 +386,7 @@ class CustomPaddleOCR:
                 rec_model_name = "PP-OCRv3_mobile_rec"
             elif rec_lang is not None:
                 rec_model_name = f"{rec_lang}_PP-OCRv3_mobile_rec"
-            return "PP-OCRv3_mobile_det", rec_model_name
+            return f"PP-OCRv3_{model_type}_det", rec_model_name
 
     @staticmethod
     def load_pipeline_config(pipeline_name: str = "OCR") -> dict:
