@@ -10,7 +10,6 @@ class OCRReisizeNormImg:
     """for ocr image resize and normalization"""
 
     def __init__(self, rec_image_shape=[3, 48, 320], input_shape=None):
-        super().__init__()
         self.rec_image_shape = rec_image_shape
         self.input_shape = input_shape
         self.max_imgW = 3200
@@ -69,7 +68,6 @@ class BaseRecLabelDecode:
     """Convert between text-label and text-index"""
 
     def __init__(self, character_str=None, use_space_char=True):
-        super().__init__()
         self.reverse = False
         character_list = (
             list(character_str)

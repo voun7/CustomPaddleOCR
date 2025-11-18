@@ -14,29 +14,13 @@ A program that uses paddleocr models with onnx for OCR inference.
 These packages are optional if the model being used has already been converted.
 
 ```
-pip install paddlepaddle==3.1.1
+pip install .[full]
 ```
 
-```
-pip install paddle2onnx==2.0.2rc3
-```
-
-For GPU
+**For only inference**
 
 ```
-pip install onnxruntime-gpu[cuda,cudnn]==1.23.2
-```
-
-For CPU
-
-```
-pip install onnxruntime==1.23.2
-```
-
-Other packages
-
-```commandline
-pip install -r requirements.txt
+pip install .
 ```
 
 ### Build Package
@@ -53,8 +37,10 @@ python -m build
 
 ### Install using pip
 
+Remove `[full]` to not install optional packages
+
 ```
-pip install git+https://github.com/voun7/CustomPaddleOCR.git
+pip install git+https://github.com/voun7/CustomPaddleOCR.git[full]
 ```
 
 ``` python
