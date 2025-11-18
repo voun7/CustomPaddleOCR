@@ -5,7 +5,7 @@
 
 ## Introduction
 
-A program that uses paddleocr models with onnx for OCR inference.
+A program that uses PaddleOCR models with ONNX for OCR inference.
 
 ### Install packages
 

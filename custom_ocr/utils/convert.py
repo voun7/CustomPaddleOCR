@@ -39,11 +39,11 @@ def _run_paddle2onnx(input_dir, output_dir, opset_version, onnx_model_filename):
         "--opset_version", str(opset_version),
     ]
     try:
-        logger.info(f"Running Paddle2ONNX command: {' '.join(cmd)}")
+        logger.debug(f"Running Paddle2ONNX command: {' '.join(cmd)}")
         subprocess.check_call(cmd)
     except subprocess.CalledProcessError as e:
         sys.exit(f"Paddle2ONNX conversion failed with exit code {e.returncode}")
-    logger.info("Paddle2ONNX conversion succeeded")
+    logger.info("Paddle2ONNX conversion succeeded...\n")
 
 
 def _copy_config_file(input_dir, output_dir, config_filename):
@@ -75,12 +75,11 @@ def paddle_to_onnx(paddle_model_dir, onnx_model_dir, opset_version=7):
     if not onnx_model_dir:
         onnx_model_dir = paddle_model_dir
     onnx_model_dir = Path(onnx_model_dir)
-    logger.info(f"Input dir: {paddle_model_dir}")
-    logger.info(f"Output dir: {onnx_model_dir}")
+    logger.debug(f"Input dir: {paddle_model_dir}")
+    logger.debug(f"Output dir: {onnx_model_dir}")
     _check_input_dir(paddle_model_dir, config_filename)
     _check_paddle2onnx()
     _run_paddle2onnx(paddle_model_dir, onnx_model_dir, opset_version, onnx_model_filename)
     if not (onnx_model_dir.exists() and onnx_model_dir.samefile(paddle_model_dir)):
         _copy_config_file(paddle_model_dir, onnx_model_dir, config_filename)
         _copy_additional_files(paddle_model_dir, onnx_model_dir, additional_filenames)
-    logger.info("Done")

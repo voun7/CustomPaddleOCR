@@ -168,7 +168,7 @@ class ModelManager:
     def get_model(self, model_name: str) -> Path:
         model_dir = Path(self._save_dir) / model_name
         if not model_dir.exists():
-            logger.info(f"Using official model ({model_name}),  the model files will be downloaded and saved. "
+            logger.info(f"Using model '{model_name}'. The models files will be downloaded and saved."
                         f"\nDir: {model_dir.absolute()}.")
             self._download(model_name, model_dir)
             logger.info(f"'{model_name}' model files has been download from model source!")
