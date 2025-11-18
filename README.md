@@ -37,10 +37,10 @@ python -m build
 
 ### Install using pip
 
-Remove `[full]` to not install optional packages
+Remove `custom_ocr[full]@` to not install optional packages
 
 ```
-pip install git+https://github.com/voun7/CustomPaddleOCR.git[full]
+pip install custom_ocr[full]@git+https://github.com/voun7/CustomPaddleOCR.git
 ```
 
 ``` python
