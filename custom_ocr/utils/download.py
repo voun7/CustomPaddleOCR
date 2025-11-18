@@ -1,9 +1,7 @@
 import os
 import shutil
-import sys
 import tarfile
 import tempfile
-import time
 import zipfile
 from pathlib import Path
 
@@ -12,30 +10,32 @@ import requests
 from . import logger
 
 
-class _ProgressPrinter:
+def print_progress(iteration: int, total: int, prefix: str = '', suffix: str = 'Complete', decimals: int = 3,
+                   bar_length: int = 25) -> None:
     """
-    ProgressPrinter
+    Call in a loop to create standard out progress bar.
+    :param iteration: current iteration
+    :param total: total iterations
+    :param prefix: a prefix string to be printed in progress bar
+    :param suffix: suffix string
+    :param decimals: positive number of decimals in percent complete
+    :param bar_length: character length of bar
     """
+    if not total:  # prevent error if total is zero.
+        return
 
-    def __init__(self, flush_interval=0.1):
-        super().__init__()
-        self._last_time = 0
-        self._flush_intvl = flush_interval
+    format_str = "{0:." + str(decimals) + "f}"  # format the % done number string
+    percents = format_str.format(100 * (iteration / float(total)))  # calculate the % done
+    filled_length = int(round(bar_length * iteration / float(total)))  # calculate the filled bar length
+    bar = '#' * filled_length + '-' * (bar_length - filled_length)  # generate the bar string
+    print(f"\r{prefix} |{bar}| {percents}% {suffix}", end='', flush=True)  # prints progress on the same line
 
-    def print(self, str_, end=False):
-        """print"""
-        if end:
-            str_ += "\n"
-            self._last_time = 0
-        if time.time() - self._last_time >= self._flush_intvl:
-            sys.stdout.write(f"\r{str_}")
-            self._last_time = time.time()
-            sys.stdout.flush()
+    if "100.0" in percents:  # prevent next line from joining previous line
+        print()
 
 
-def _download(url, save_path, print_progress):
-    if print_progress:
-        logger.info(f"Connecting to {url} ...")
+def _download(url, save_path):
+    logger.info(f"Connecting to {url} ...")
 
     with requests.get(url, stream=True, timeout=15) as r:
         r.raise_for_status()
@@ -49,17 +49,11 @@ def _download(url, save_path, print_progress):
             with open(save_path, "wb") as f:
                 dl = 0
                 total_length = int(total_length)
-                if print_progress:
-                    printer = _ProgressPrinter()
-                    logger.info(f"Downloading {os.path.basename(save_path)}...")
+                logger.info(f"Downloading {os.path.basename(save_path)}...")
                 for data in r.iter_content(chunk_size=4096):
                     dl += len(data)
                     f.write(data)
-                    if print_progress:
-                        done = int(30 * dl / total_length)
-                        printer.print(f"|{'#' * done:<30s}| {float(100 * dl) / total_length:.2f}%")
-            if print_progress:
-                printer.print(f"|{'#' * 30:<30s}| {100:.2f}%", end=True)
+                    print_progress(dl, total_length)
 
 
 def _extract_zip_file(file_path, extd_dir):
@@ -90,11 +84,9 @@ def _extract_tar_file(file_path, extd_dir):
         logger.exception(f"An error occurred: {e}")
 
 
-def _extract(file_path, extd_dir, print_progress):
+def _extract(file_path, extd_dir):
     """extract"""
-    if print_progress:
-        printer = _ProgressPrinter()
-        logger.info(f"Extracting {os.path.basename(file_path)}")
+    logger.info(f"Extracting {os.path.basename(file_path)}")
 
     if zipfile.is_zipfile(file_path):
         handler = _extract_zip_file
@@ -104,11 +96,7 @@ def _extract(file_path, extd_dir, print_progress):
         raise RuntimeError("Unsupported file format.")
 
     for total_num, index in handler(file_path, extd_dir):
-        if print_progress:
-            done = int(30 * float(index) / total_num)
-            printer.print(f"|{'#' * done:<30s}| {float(100 * index) / total_num:.2f}%")
-    if print_progress:
-        printer.print(f"|{'#' * 30:<30s}| {100:.2f}%", end=True)
+        print_progress(index + 1, total_num)
 
 
 def _remove_if_exists(path):
@@ -120,16 +108,16 @@ def _remove_if_exists(path):
             os.remove(path)
 
 
-def download(url, save_path, print_progress=True, overwrite=False):
+def download(url, save_path, overwrite=False):
     """download"""
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     if overwrite:
         _remove_if_exists(save_path)
     if not os.path.exists(save_path):
-        _download(url, save_path, print_progress=print_progress)
+        _download(url, save_path)
 
 
-def download_and_extract(url, save_dir, dst_name, print_progress=True, overwrite=False, no_interm_dir=True):
+def download_and_extract(url, save_dir, dst_name, overwrite=False, no_interm_dir=True):
     """
     download and extract
     NOTE: `url` MUST come from a trusted source, since we do not provide a solution to secure against CVE-2007-4559.
@@ -143,9 +131,9 @@ def download_and_extract(url, save_dir, dst_name, print_progress=True, overwrite
         with tempfile.TemporaryDirectory() as td:
             arc_file_path = os.path.join(td, url.split("/")[-1])
             extd_dir = os.path.splitext(arc_file_path)[0]
-            _download(url, arc_file_path, print_progress=print_progress)
+            _download(url, arc_file_path)
             tmp_extd_dir = os.path.join(td, "extract")
-            _extract(arc_file_path, tmp_extd_dir, print_progress=print_progress)
+            _extract(arc_file_path, tmp_extd_dir)
             if no_interm_dir:
                 file_names = os.listdir(tmp_extd_dir)
                 if len(file_names) == 1:
