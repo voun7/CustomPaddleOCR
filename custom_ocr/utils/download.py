@@ -28,9 +28,9 @@ class _ProgressPrinter:
             str_ += "\n"
             self._last_time = 0
         if time.time() - self._last_time >= self._flush_intvl:
-            sys.stderr.write(f"\r{str_}")
+            sys.stdout.write(f"\r{str_}")
             self._last_time = time.time()
-            sys.stderr.flush()
+            sys.stdout.flush()
 
 
 def _download(url, save_path, print_progress):
@@ -56,10 +56,10 @@ def _download(url, save_path, print_progress):
                     dl += len(data)
                     f.write(data)
                     if print_progress:
-                        done = int(50 * dl / total_length)
-                        printer.print(f"[{'=' * done:<50s}] {float(100 * dl) / total_length:.2f}%")
+                        done = int(30 * dl / total_length)
+                        printer.print(f"|{'#' * done:<30s}| {float(100 * dl) / total_length:.2f}%")
             if print_progress:
-                printer.print(f"[{'=' * 50:<50s}] {100:.2f}%", end=True)
+                printer.print(f"|{'#' * 30:<30s}| {100:.2f}%", end=True)
 
 
 def _extract_zip_file(file_path, extd_dir):
@@ -105,10 +105,10 @@ def _extract(file_path, extd_dir, print_progress):
 
     for total_num, index in handler(file_path, extd_dir):
         if print_progress:
-            done = int(50 * float(index) / total_num)
-            printer.print(f"[{'=' * done:<50s}] {float(100 * index) / total_num:.2f}%")
+            done = int(30 * float(index) / total_num)
+            printer.print(f"|{'#' * done:<30s}| {float(100 * index) / total_num:.2f}%")
     if print_progress:
-        printer.print(f"[{'=' * 50:<50s}] {100:.2f}%", end=True)
+        printer.print(f"|{'#' * 30:<30s}| {100:.2f}%", end=True)
 
 
 def _remove_if_exists(path):
