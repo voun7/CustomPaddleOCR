@@ -9,6 +9,18 @@ A program that uses PaddleOCR models with ONNX for OCR inference.
 
 ### Install packages
 
+For GPU
+
+```
+pip install onnxruntime-gpu[cuda,cudnn]==1.23.2
+```
+
+For CPU
+
+```
+pip install onnxruntime==1.23.2
+```
+
 **For Converting paddle models to onnx**
 
 These packages are optional if the model being used has already been converted.
